@@ -1,0 +1,36 @@
+# Render Blueprint for the CoreVault backend (see README "Deploying").
+# Render reads this file when you choose New -> Blueprint and pick this repo.
+services:
+  - type: web
+    name: corevault-api
+    runtime: python
+    rootDir: backend
+    # A persistent disk (below) needs a paid instance; free instances wipe
+    # their disk on every restart, which would delete every uploaded file.
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    # One process only: the upload locks in app/workers.py are in-memory.
+    # Migrations run first, so new ones apply automatically on each deploy.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    disk:
+      name: corevault-storage
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # Supabase *session pooler* URL (Connect -> Session pooler). Render asks for it during setup.
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      # Signs login tokens; Render generates a random one.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STORAGE_ROOT
+        value: /var/data/storage
+      # The Vercel address of the frontend, e.g. https://corevault.vercel.app
+      # (Render asks during setup; set it once the frontend is deployed).
+      - key: FRONTEND_URL
+        sync: false

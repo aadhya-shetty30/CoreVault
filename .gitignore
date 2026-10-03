@@ -1,0 +1,25 @@
+# --- Python / backend --------------------------------------------------
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/.venv*/
+backend/venv/
+*.pyc
+
+# Uploaded file storage and the standalone lock-demo's scratch file --
+# these are runtime output, not source.
+backend/storage/*
+!backend/storage/.gitkeep
+backend/scripts/_lock_demo_target.txt
+
+# --- Node / frontend -----------------------------------------------------
+frontend/node_modules/
+frontend/dist/
+
+# --- Env files (never commit real secrets/creds) --------------------------
+.env
+frontend/.env
+
+# --- OS ------------------------------------------------------------------
+.DS_Store
+Thumbs.db

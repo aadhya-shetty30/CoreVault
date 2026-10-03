@@ -1,0 +1,23 @@
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+sqlalchemy[asyncio]==2.0.35
+alembic==1.13.3
+asyncpg==0.29.0
+# psycopg2-binary is only used by Alembic (migrations run over a plain sync
+# connection); the running app uses asyncpg exclusively.
+psycopg2-binary==2.9.9
+passlib[bcrypt]==1.7.4
+# Pinned explicitly: passlib 1.7.4's bcrypt backend probes bcrypt.__about__,
+# which bcrypt>=4.1 removed, causing a spurious error on import. bcrypt
+# 4.0.1 is the last release that still has it and is fully compatible.
+bcrypt==4.0.1
+pyjwt==2.9.0
+python-multipart==0.0.12
+portalocker==2.10.1
+# Phase 2: TOTP-based 2FA (RFC 6238), used by app/otp.py.
+pyotp==2.9.0
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator==2.2.0
+# Used only by backend/scripts/seed_and_demo.py to drive the API end-to-end.
+requests==2.32.3
