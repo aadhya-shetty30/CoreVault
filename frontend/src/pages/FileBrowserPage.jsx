@@ -13,6 +13,7 @@ import FileVersionsModal from "../components/FileVersionsModal.jsx";
 import ShareModal from "../components/ShareModal.jsx";
 import StaleFilesModal from "../components/StaleFilesModal.jsx";
 import FileActivityModal from "../components/FileActivityModal.jsx";
+import CollaborativeEditorModal from "../components/CollaborativeEditorModal.jsx";
 import {
   ActivityIcon,
   DownloadIcon,
@@ -49,6 +50,7 @@ function IconButton({ label, onClick, danger = false, children }) {
 /** Phone-sized overflow menu for a file row (desktop shows the icon buttons instead). */
 function RowMenu({ actions }) {
   const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -58,11 +60,17 @@ function RowMenu({ actions }) {
   }, [open]);
   return (
     <div className="relative" ref={ref}>
-      <IconButton label="More actions" onClick={() => setOpen((o) => !o)}>
+      <IconButton label="More actions" onClick={() => {
+        if (!open && ref.current) {
+          const bounds = ref.current.getBoundingClientRect();
+          setOpenUp(bounds.bottom + actions.length * 42 + 16 > window.innerHeight - 8);
+        }
+        setOpen((o) => !o);
+      }}>
         <DotsIcon className="w-4 h-4" />
       </IconButton>
       {open && (
-        <div role="menu" className="absolute right-0 mt-1 w-48 rounded-xl bg-white shadow-lg ring-1 ring-slate-200 py-1.5 z-30">
+        <div role="menu" className={`absolute right-0 ${openUp ? "bottom-full mb-1" : "top-full mt-1"} w-48 rounded-xl bg-white shadow-lg ring-1 ring-slate-200 py-1.5 z-30`}>
           {actions.map(({ label, icon: ActionIcon, onClick, danger }) => (
             <button
               key={label}
@@ -98,6 +106,7 @@ export default function FileBrowserPage() {
   const [shareFile, setShareFile] = useState(null);
   const [staleFiles, setStaleFiles] = useState(null);
   const [activityFile, setActivityFile] = useState(null);
+  const [editorFile, setEditorFile] = useState(null);
 
   const currentFolderId = folderId && folderId !== "root" ? folderId : null;
 
@@ -206,6 +215,7 @@ export default function FileBrowserPage() {
   const folders = detail?.folders ?? [];
   const files = detail?.files ?? [];
   const isEmpty = !loading && folders.length === 0 && files.length === 0;
+  const isEditableText = (name) => /\.(txt|md|markdown|csv|json|xml|html?|css|js|jsx|ts|tsx|py|java|c|h|cpp|ya?ml|toml|ini|log|sql|sh)$/i.test(name);
 
   return (
     <AppShell selectedFolderId={currentFolderId} treeRefreshKey={treeRefreshKey}>
@@ -309,7 +319,7 @@ export default function FileBrowserPage() {
             {files.length > 0 && (
               <section>
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Files</h2>
-                <div className="rounded-xl bg-white ring-1 ring-slate-200/80 shadow-sm overflow-hidden">
+                <div className="rounded-xl bg-white ring-1 ring-slate-200/80 shadow-sm overflow-visible">
                   <div className="hidden md:grid grid-cols-[minmax(0,1fr)_6rem_7rem_13rem] gap-4 px-4 py-2.5 border-b border-slate-100 text-xs font-medium text-slate-400">
                     <span>Name</span>
                     <span className="text-right">Size</span>
@@ -336,12 +346,14 @@ export default function FileBrowserPage() {
                         <span className="hidden md:block text-sm text-slate-500 text-right tabular-nums">{formatBytes(file.size_bytes)}</span>
                         <span className="hidden md:block text-sm text-slate-500">{formatDate(file.updated_at)}</span>
                         <div className="flex md:hidden items-center justify-end">
+                          {isEditableText(file.filename) && <IconButton label="Edit together" onClick={() => setEditorFile(file)}><span className="text-[11px] font-semibold">Edit</span></IconButton>}
                           <IconButton label="Download" onClick={() => handleDownload(file)}>
                             <DownloadIcon className="w-4 h-4" />
                           </IconButton>
                           <RowMenu
                             actions={[
                               { label: "Version history", icon: HistoryIcon, onClick: () => setVersionsFile(file) },
+                              ...(isEditableText(file.filename) ? [{ label: "Edit together", icon: HistoryIcon, onClick: () => setEditorFile(file) }] : []),
                               { label: "Activity", icon: ActivityIcon, onClick: () => setActivityFile(file) },
                               { label: "Share", icon: ShareIcon, onClick: () => setShareFile(file) },
                               { label: "Move to recycle bin", icon: TrashIcon, onClick: () => handleDeleteFile(file), danger: true },
@@ -349,6 +361,7 @@ export default function FileBrowserPage() {
                           />
                         </div>
                         <div className="hidden md:flex items-center justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          {isEditableText(file.filename) && <IconButton label="Edit together" onClick={() => setEditorFile(file)}><span className="text-[11px] font-semibold">Edit</span></IconButton>}
                           <IconButton label="Version history" onClick={() => setVersionsFile(file)}>
                             <HistoryIcon className="w-4 h-4" />
                           </IconButton>
@@ -381,6 +394,7 @@ export default function FileBrowserPage() {
       {shareFile && <ShareModal file={shareFile} onClose={() => setShareFile(null)} />}
       {staleFiles && <StaleFilesModal files={staleFiles} onClose={() => setStaleFiles(null)} onChanged={load} />}
       {activityFile && <FileActivityModal file={activityFile} onClose={() => setActivityFile(null)} />}
+      {editorFile && <CollaborativeEditorModal file={editorFile} onClose={() => setEditorFile(null)} onChanged={load} />}
     </AppShell>
   );
 }

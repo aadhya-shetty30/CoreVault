@@ -3,6 +3,7 @@ uvicorn[standard]==0.32.0
 sqlalchemy[asyncio]==2.0.35
 alembic==1.13.3
 asyncpg==0.29.0
+aiosqlite==0.20.0
 # psycopg2-binary is only used by Alembic (migrations run over a plain sync
 # connection); the running app uses asyncpg exclusively.
 psycopg2-binary==2.9.9

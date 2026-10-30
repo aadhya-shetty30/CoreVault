@@ -5,9 +5,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import admin, analytics, auth, files, folders, permissions, recycle_bin, shared, system
+from app.database import engine
+from app.models import Base
+from app.routers import admin, analytics, auth, collaboration, files, folders, permissions, recycle_bin, shared, system
 
 app = FastAPI(title="CoreVault API", version="0.3.0")
+
+
+@app.on_event("startup")
+async def initialize_local_database():
+    """Create the schema automatically for the zero-setup local SQLite demo.
+
+    PostgreSQL deployments continue to use Alembic migrations.
+    """
+    if settings.DATABASE_URL.startswith("sqlite://"):
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
 
 # Browsers may call this API from: the local Vite dev server (port 5173),
 # the deployed frontend (FRONTEND_URL -- the same setting share links are
@@ -27,6 +40,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(folders.router)
 app.include_router(files.router)
+app.include_router(collaboration.router)
 app.include_router(permissions.router)
 app.include_router(recycle_bin.router)
 app.include_router(shared.router)

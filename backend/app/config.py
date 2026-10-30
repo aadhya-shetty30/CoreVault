@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Deliberately has NO default: it embeds the database password, so it
     # must only ever come from .env (gitignored), never from source. Startup
     # fails with "DATABASE_URL Field required" if .env is missing it.
-    DATABASE_URL: str
+    DATABASE_URL: str = "sqlite:///./corevault.db"
     # Supabase requires SSL on every connection. True by default (correct
     # for Supabase); set DATABASE_SSL=false in .env only if you're pointing
     # this at a local/non-Supabase Postgres that doesn't have SSL set up,
@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     @property
     def async_database_url(self) -> str:
         """Used by the running FastAPI app (app/database.py)."""
+        if self.DATABASE_URL.startswith("sqlite://"):
+            return self.DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://", 1)
         return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     @property
@@ -106,6 +108,8 @@ class Settings(BaseSettings):
         """Used by Alembic (alembic/env.py) and the sync worker pool
         (app/workers.py) -- migrations and upload finalization both run over
         a plain sync connection since neither is async-aware."""
+        if self.DATABASE_URL.startswith("sqlite://"):
+            return self.DATABASE_URL
         return self.DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
     @property
@@ -128,6 +132,8 @@ class Settings(BaseSettings):
         """Passed as create_engine(..., connect_args=...) for the sync
         engines (Alembic, app/workers.py, and the scripts/ that talk to the
         DB directly). psycopg2 takes `sslmode`, not `ssl`."""
+        if self.DATABASE_URL.startswith("sqlite://"):
+            return {}
         return {"sslmode": "require"} if self.DATABASE_SSL else {}
 
 

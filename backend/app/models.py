@@ -21,9 +21,9 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Uuid,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -51,7 +51,7 @@ class ShareRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(64), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
@@ -78,19 +78,19 @@ class User(Base):
 class Folder(Base):
     __tablename__ = "folders"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # ondelete="CASCADE" here is a DB-level safety net (e.g. for a future
     # "delete my account" feature). Phase 1's DELETE /folders/{id} does NOT
     # rely on this cascade -- it walks the subtree explicitly in app code
     # (routers/folders.py) because only app code can also remove the
     # matching files from disk, which the database can't do for us.
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # Self-referencing FK for the folder tree. NULL = lives at the user's
     # root. Cycle prevention (a folder can't be moved into its own
     # descendant) is enforced in application code -- see _is_descendant()
     # in routers/folders.py -- because a FK constraint has no notion of
     # "ancestor" to check against.
-    parent_folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
+    parent_folder_id = Column(Uuid(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -98,10 +98,10 @@ class Folder(Base):
 class File(Base):
     __tablename__ = "files"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     # NULL = file lives at the user's root (not inside any folder).
-    folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
+    folder_id = Column(Uuid(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
     filename = Column(String(500), nullable=False)
     # These three columns represent the file's CURRENT version as of Phase 2
     # (mirrored from file_versions/blobs on every upload/restore) -- kept as
@@ -120,7 +120,7 @@ class File(Base):
     # Nullable: Phase 1 rows (and any row created before dedup resolved a
     # blob) have no blob yet. Set together with content_hash/storage_path
     # whenever a version is finalized -- see app/workers.py.
-    blob_id = Column(UUID(as_uuid=True), ForeignKey("blobs.id", ondelete="SET NULL"), nullable=True, index=True)
+    blob_id = Column(Uuid(as_uuid=True), ForeignKey("blobs.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     # --- Phase 3: stale-file review (migration 0003) ---
@@ -141,7 +141,7 @@ class Blob(Base):
 
     __tablename__ = "blobs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     content_hash = Column(String(64), unique=True, nullable=False, index=True)
     storage_path = Column(String(1000), nullable=False)
     size_bytes = Column(BigInteger, nullable=False)
@@ -155,8 +155,8 @@ class Blob(Base):
 class FileVersion(Base):
     __tablename__ = "file_versions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    file_id = Column(Uuid(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
     version_number = Column(Integer, nullable=False)
     # content_hash/storage_path are copied from the Blob at the time this
     # version was created. They're denormalized (not just a blob_id FK) so
@@ -165,7 +165,7 @@ class FileVersion(Base):
     content_hash = Column(String(64), nullable=False)
     storage_path = Column(String(1000), nullable=False)
     size_bytes = Column(BigInteger, nullable=False)
-    modified_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    modified_by = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     modified_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -183,12 +183,20 @@ class Permission(Base):
         ),
     )
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=True, index=True)
-    folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(Enum(PermissionRole, name="permission_role", native_enum=True), nullable=False)
-    granted_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    file_id = Column(Uuid(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=True, index=True)
+    folder_id = Column(Uuid(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(
+        Enum(
+            PermissionRole,
+            name="permission_role",
+            native_enum=True,
+            values_callable=lambda role_enum: [member.value for member in role_enum],
+        ),
+        nullable=False,
+    )
+    granted_by = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     granted_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -200,14 +208,22 @@ class SharedLink(Base):
 
     __tablename__ = "shared_links"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    file_id = Column(Uuid(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
     token = Column(String(64), unique=True, nullable=False, index=True)
-    role = Column(Enum(ShareRole, name="share_role", native_enum=True), nullable=False)
+    role = Column(
+        Enum(
+            ShareRole,
+            name="share_role",
+            native_enum=True,
+            values_callable=lambda role_enum: [member.value for member in role_enum],
+        ),
+        nullable=False,
+    )
     expires_at = Column(DateTime(timezone=True), nullable=True)
     max_access_count = Column(Integer, nullable=True)
     access_count = Column(Integer, nullable=False, default=0)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
@@ -220,10 +236,10 @@ class FileActivity(Base):
 
     __tablename__ = "file_activity"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_id = Column(UUID(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    file_id = Column(Uuid(as_uuid=True), ForeignKey("files.id", ondelete="CASCADE"), nullable=False, index=True)
     # NULL = anonymous (public share-link download) or a since-deleted user.
-    actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     action = Column(String(32), nullable=False)
     detail = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

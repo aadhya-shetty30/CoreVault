@@ -14,6 +14,7 @@ import {
   LogoutIcon,
   MenuIcon,
   ShieldIcon,
+  ShareIcon,
   TrashIcon,
   UsersIcon,
 } from "./Icons.jsx";
@@ -150,6 +151,9 @@ export default function AppShell({ children, selectedFolderId = null, treeRefres
       <nav className="px-3 space-y-1">
         <NavItem to="/app" icon={HomeIcon}>
           My files
+        </NavItem>
+        <NavItem to="/shared-with-me" icon={ShareIcon}>
+          Shared with me
         </NavItem>
         <NavItem to="/dashboard" icon={ChartIcon}>
           Dashboard

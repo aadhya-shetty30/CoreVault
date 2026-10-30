@@ -8,6 +8,7 @@ import RecycleBinPage from "./pages/RecycleBinPage.jsx";
 import SharedLinkPage from "./pages/SharedLinkPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
+import SharedWithMePage from "./pages/SharedWithMePage.jsx";
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth();
@@ -27,6 +28,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <RecycleBinPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shared-with-me"
+        element={
+          <ProtectedRoute>
+            <SharedWithMePage />
           </ProtectedRoute>
         }
       />

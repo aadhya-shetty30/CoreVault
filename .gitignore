@@ -23,3 +23,18 @@ frontend/.env
 # --- OS ------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+# Additional environment files and secrets
+.env.*
+!.env.example
+frontend/.env.*
+!frontend/.env.example
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*-shm
+*-wal
+
+# Backup files
+*.backup

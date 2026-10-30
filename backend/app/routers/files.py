@@ -309,6 +309,23 @@ async def complete_chunked_upload(
 # --- metadata / download / delete ---------------------------------------------
 
 
+@router.get("/shared-with-me")
+async def shared_with_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Files shared directly with this user, including their assigned role."""
+    rows = (
+        await db.execute(
+            select(FileModel, Permission.role)
+            .join(Permission, Permission.file_id == FileModel.id)
+            .where(Permission.user_id == current_user.id, FileModel.is_deleted == False)  # noqa: E712
+            .order_by(FileModel.updated_at.desc())
+        )
+    ).all()
+    return [{**FileOut.model_validate(file_row).model_dump(), "role": role.value} for file_row, role in rows]
+
+
 @router.get("/{file_id}", response_model=FileOut)
 async def get_file_metadata(
     file_id: uuid.UUID,
